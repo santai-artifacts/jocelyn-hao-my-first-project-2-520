@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JobBot — Scraper Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface-2: #222535;
+    --surface-3: #2a2e42;
+    --border: #2e3248;
+    --border-light: #3a3f5a;
+    --text: #e8eaf0;
+    --text-muted: #7b82a4;
+    --text-dim: #4a5070;
+    --accent: #6366f1;
+    --accent-soft: rgba(99,102,241,0.15);
+    --accent-glow: rgba(99,102,241,0.4);
+    --green: #22c55e;
+    --green-soft: rgba(34,197,94,0.12);
+    --yellow: #f59e0b;
+    --yellow-soft: rgba(245,158,11,0.12);
+    --red: #ef4444;
+    --red-soft: rgba(239,68,68,0.12);
+    --cyan: #06b6d4;
+    --cyan-soft: rgba(6,182,212,0.12);
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* ── Layout ── */
+  .layout {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    grid-template-rows: 56px 1fr;
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  header {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 24px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: -0.3px;
+  }
+  .logo-icon {
+    width: 28px;
+    height: 28px;
+    background: var(--accent);
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+  }
+  .logo-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    animation: pulse 2s ease-in-out infinite;
+    margin-left: auto;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 6px var(--green); }
+    50% { opacity: 0.5; box-shadow: 0 0 2px var(--green); }
+  }
+  .agent-status {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-left: 20px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .status-badge {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    border-radius: 20px;
+    font-size: 11.5px;
+    font-weight: 500;
+    background: var(--green-soft);
+    color: var(--green);
+    border: 1px solid rgba(34,197,94,0.25);
+  }
+  .header-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s;
+  }
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { background: var(--surface-2); color: var(--text); border-color: var(--border-light); }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+  }
+  .btn-primary:hover { background: #5558e3; box-shadow: 0 0 16px var(--accent-glow); }
+
+  /* ── Sidebar ── */
+  nav {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 20px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    overflow-y: auto;
+  }
+  .nav-section {
+    padding: 6px 16px 4px;
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-top: 10px;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px;
+    border-radius: 0;
+    font-size: 13.5px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.12s;
+    position: relative;
+  }
+  .nav-item:hover { color: var(--text); background: var(--surface-2); }
+  .nav-item.active {
+    color: var(--text);
+    background: var(--accent-soft);
+  }
+  .nav-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 4px; bottom: 4px;
+    width: 3px;
+    background: var(--accent);
+    border-radius: 0 3px 3px 0;
+  }
+  .nav-icon { font-size: 15px; width: 18px; text-align: center; }
+  .nav-badge {
+    margin-left: auto;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 1px 7px;
+    border-radius: 20px;
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  /* ── Main ── */
+  main {
+    overflow-y: auto;
+    padding: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .page-title {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.4px;
+  }
+  .page-subtitle { color: var(--text-muted); font-size: 13px; margin-top: 2px; }
+
+  /* ── Stats Row ── */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: border-color 0.15s;
+  }
+  .stat-card:hover { border-color: var(--border-light); }
+  .stat-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .stat-value {
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: -1px;
+    line-height: 1;
+  }
+  .stat-delta {
+    font-size: 11.5px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .delta-up { color: var(--green); }
+  .delta-down { color: var(--red); }
+
+  /* ── Two-col section ── */
+  .two-col { display: grid; grid-template-columns: 1fr 320px; gap: 16px; }
+
+  /* ── Panel ── */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .panel-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+    font-size: 13.5px;
+  }
+  .panel-header .count {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    background: var(--surface-2);
+    color: var(--text-muted);
+    font-weight: 500;
+    margin-left: auto;
+  }
+
+  /* ── Toolbar ── */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .search-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 180px;
+  }
+  .search-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-dim);
+    font-size: 13px;
+  }
+  .search-input {
+    width: 100%;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 7px 12px 7px 32px;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .search-input:focus { border-color: var(--accent); }
+  .search-input::placeholder { color: var(--text-dim); }
+  select {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 7px 12px;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    outline: none;
+    cursor: pointer;
+  }
+  select:focus { border-color: var(--accent); }
+
+  /* ── Table ── */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left;
+    padding: 10px 18px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-2);
+    white-space: nowrap;
+  }
+  td { padding: 13px 18px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface-2); }
+
+  .job-title { font-weight: 600; font-size: 13.5px; }
+  .job-company { color: var(--text-muted); font-size: 12.5px; margin-top: 2px; }
+  .job-source {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: 20px;
+    font-size: 11.5px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .tag-remote { background: var(--cyan-soft); color: var(--cyan); }
+  .tag-hybrid { background: var(--yellow-soft); color: var(--yellow); }
+  .tag-onsite { background: var(--surface-3); color: var(--text-muted); }
+  .tag-new { background: var(--accent-soft); color: var(--accent); }
+  .tag-seen { background: var(--surface-3); color: var(--text-dim); }
+
+  .salary { font-weight: 500; font-size: 13px; white-space: nowrap; }
+  .salary-null { color: var(--text-dim); font-style: italic; font-size: 12px; }
+
+  .time-ago { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+
+  .row-actions { display: flex; gap: 6px; }
+  .icon-btn {
+    width: 28px; height: 28px;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    transition: all 0.12s;
+  }
+  .icon-btn:hover { background: var(--surface-2); color: var(--text); border-color: var(--border-light); }
+  .icon-btn.saved { color: var(--yellow); border-color: var(--yellow); background: var(--yellow-soft); }
+
+  /* ── Pagination ── */
+  .pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 18px;
+    border-top: 1px solid var(--border);
+    font-size: 12.5px;
+    color: var(--text-muted);
+  }
+  .pg-btns { display: flex; gap: 4px; }
+  .pg-btn {
+    width: 30px; height: 30px;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.12s;
+  }
+  .pg-btn:hover, .pg-btn.active { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+
+  /* ── Agent Log ── */
+  .log-wrap { padding: 0; overflow-y: auto; max-height: 420px; }
+  .log-entry {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 18px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12.5px;
+    transition: background 0.1s;
+  }
+  .log-entry:last-child { border-bottom: none; }
+  .log-entry:hover { background: var(--surface-2); }
+  .log-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    margin-top: 5px;
+    flex-shrink: 0;
+  }
+  .dot-green { background: var(--green); }
+  .dot-yellow { background: var(--yellow); }
+  .dot-cyan { background: var(--cyan); }
+  .dot-red { background: var(--red); }
+  .dot-dim { background: var(--text-dim); }
+  .log-time { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); flex-shrink: 0; min-width: 50px; }
+  .log-msg { color: var(--text-muted); line-height: 1.4; }
+  .log-msg b { color: var(--text); font-weight: 500; }
+
+  /* ── Sources chart ── */
+  .sources-list { padding: 6px 0; }
+  .source-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 18px;
+    cursor: default;
+    transition: background 0.1s;
+  }
+  .source-row:hover { background: var(--surface-2); }
+  .source-name { font-size: 13px; font-weight: 500; min-width: 90px; }
+  .source-bar-wrap { flex: 1; height: 5px; background: var(--surface-3); border-radius: 3px; overflow: hidden; }
+  .source-bar { height: 100%; border-radius: 3px; background: var(--accent); transition: width 0.6s ease; }
+  .source-count { font-size: 12px; color: var(--text-muted); min-width: 30px; text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* ── Responsive ── */
+  @media (max-width: 1100px) {
+    .layout { grid-template-columns: 1fr; }
+    nav { display: none; }
+    .two-col { grid-template-columns: 1fr; }
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 640px) {
+    .stats-row { grid-template-columns: 1fr 1fr; }
+    main { padding: 16px; }
+  }
+
+  /* ── Spinner ── */
+  .spinner {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border: 1.5px solid var(--accent-soft);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Skill tags cell ── */
+  .skill-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+  .skill-tag {
+    font-size: 10.5px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: var(--surface-3);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+  }
+
+  /* ── Run history sparkline ── */
+  .run-history { display: flex; align-items: flex-end; gap: 2px; height: 32px; }
+  .run-bar { width: 8px; border-radius: 2px; background: var(--accent); opacity: 0.6; transition: opacity 0.1s; }
+  .run-bar:hover { opacity: 1; }
+  .run-bar.error { background: var(--red); }
+
+  .section-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- Header -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🤖</div>
+      JobBot
+    </div>
+    <div class="agent-status">
+      <div class="status-badge">
+        <div class="spinner"></div>
+        Scraping LinkedIn
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="btn btn-ghost" onclick="triggerRun()">⟳ Run Now</button>
+      <button class="btn btn-primary">⚙ Configure</button>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <nav>
+    <div class="nav-section">Overview</div>
+    <div class="nav-item active" onclick="setNav(this)">
+      <span class="nav-icon">◼</span> Dashboard
+    </div>
+    <div class="nav-item" onclick="setNav(this)">
+      <span class="nav-icon">◻</span> All Jobs
+      <span class="nav-badge">248</span>
+    </div>
+    <div class="nav-item" onclick="setNav(this)">
+      <span class="nav-icon">★</span> Saved
+      <span class="nav-badge">12</span>
+    </div>
+    <div class="nav-item" onclick="setNav(this)">
+      <span class="nav-icon">✓</span> Applied
+      <span class="nav-badge">6</span>
+    </div>
+
+    <div class="nav-section">Agent</div>
+    <div class="nav-item" onclick="setNav(this)">
+      <span class="nav-icon">▶</span> Run History
+    </div>
+    <div class="nav-item" onclick="setNav(this)">
+      <span class="nav-icon">⏱</span> Schedule
+    </div>
+    <div class="nav-item" onclick="setNav(this)">
+      <span class="nav-icon">◑</span> Sources
+    </div>
+    <div class="nav-item" onclick="setNav(this)">
+      <span class="nav-icon">⚙</span> Filters
+    </div>
+
+    <div class="nav-section">Settings</div>
+    <div class="nav-item" onclick="setNav(this)">
+      <span class="nav-icon">🔔</span> Alerts
+    </div>
+    <div class="nav-item" onclick="setNav(this)">
+      <span class="nav-icon">🔑</span> API Keys
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <main>
+
+    <!-- Page title + run sparkline -->
+    <div class="section-row">
+      <div>
+        <div class="page-title">Dashboard</div>
+        <div class="page-subtitle">Last run: 4 min ago · Next: in 26 min</div>
+      </div>
+      <div style="display:flex;align-items:flex-end;gap:10px;">
+        <span style="font-size:11px;color:var(--text-dim);">24h runs</span>
+        <div class="run-history" id="sparkline"></div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">📋 Total Scraped</div>
+        <div class="stat-value" style="color:var(--text)">248</div>
+        <div class="stat-delta delta-up">↑ 34 today</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">🆕 New Since Last Run</div>
+        <div class="stat-value" style="color:var(--accent)">11</div>
+        <div class="stat-delta delta-up">↑ from 8 last run</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">⭐ Match Score ≥ 80%</div>
+        <div class="stat-value" style="color:var(--green)">37</div>
+        <div class="stat-delta delta-up">↑ 5 today</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">🚫 Duplicates Filtered</div>
+        <div class="stat-value" style="color:var(--text-muted)">89</div>
+        <div class="stat-delta" style="color:var(--text-dim)">→ stable</div>
+      </div>
+    </div>
+
+    <!-- Jobs table + sidebar -->
+    <div class="two-col">
+
+      <!-- Jobs table -->
+      <div class="panel">
+        <div class="panel-header">
+          Recent Jobs
+          <div class="logo-dot" style="margin-left:6px;width:6px;height:6px;"></div>
+          <div class="count" id="job-count">24 results</div>
+        </div>
+        <div class="toolbar">
+          <div class="search-wrap">
+            <span class="search-icon">🔍</span>
+            <input class="search-input" type="text" placeholder="Search title, company, skill…" id="search-input" oninput="filterJobs()">
+          </div>
+          <select id="filter-location" onchange="filterJobs()">
+            <option value="">All Locations</option>
+            <option value="Remote">Remote</option>
+            <option value="Hybrid">Hybrid</option>
+            <option value="Onsite">Onsite</option>
+          </select>
+          <select id="filter-source" onchange="filterJobs()">
+            <option value="">All Sources</option>
+            <option value="LinkedIn">LinkedIn</option>
+            <option value="Indeed">Indeed</option>
+            <option value="Greenhouse">Greenhouse</option>
+            <option value="Lever">Lever</option>
+            <option value="AngelList">AngelList</option>
+          </select>
+          <select id="filter-status" onchange="filterJobs()">
+            <option value="">All</option>
+            <option value="new">New</option>
+            <option value="seen">Seen</option>
+          </select>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Job</th>
+                <th>Location</th>
+                <th>Skills</th>
+                <th>Salary</th>
+                <th>Posted</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="jobs-tbody"></tbody>
+          </table>
+        </div>
+        <div class="pagination">
+          <span id="pg-info">Showing 1–10 of 24</span>
+          <div class="pg-btns" id="pg-btns"></div>
+        </div>
+      </div>
+
+      <!-- Right column -->
+      <div style="display:flex;flex-direction:column;gap:16px;">
+
+        <!-- Sources -->
+        <div class="panel">
+          <div class="panel-header">📡 Sources</div>
+          <div class="sources-list" id="sources-list"></div>
+        </div>
+
+        <!-- Agent Log -->
+        <div class="panel">
+          <div class="panel-header">🪵 Agent Log</div>
+          <div class="log-wrap" id="agent-log"></div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+/* ─── Data ─── */
+const JOBS = [
+  { id:1, title:'Senior Frontend Engineer', company:'Stripe', source:'Greenhouse', location:'Remote', salary:'$160k–$210k', skills:['React','TypeScript','CSS'], posted:'2m ago', status:'new', match:94 },
+  { id:2, title:'Staff Software Engineer', company:'Vercel', source:'Lever', location:'Remote', salary:'$180k–$240k', skills:['Node.js','Rust','TypeScript'], posted:'18m ago', status:'new', match:88 },
+  { id:3, title:'Product Engineer', company:'Linear', source:'AngelList', location:'Remote', salary:'$140k–$180k', skills:['React','Postgres','Go'], posted:'1h ago', status:'new', match:85 },
+  { id:4, title:'Full-Stack Engineer', company:'Notion', source:'LinkedIn', location:'Hybrid', salary:'$150k–$200k', skills:['React','Python','Redis'], posted:'2h ago', status:'new', match:81 },
+  { id:5, title:'Frontend Engineer', company:'Figma', source:'Greenhouse', location:'Hybrid', salary:'$140k–$190k', skills:['React','WebGL','TypeScript'], posted:'3h ago', status:'seen', match:78 },
+  { id:6, title:'Backend Engineer', company:'PlanetScale', source:'Lever', location:'Remote', salary:'$130k–$170k', skills:['Go','MySQL','Kubernetes'], posted:'4h ago', status:'seen', match:72 },
+  { id:7, title:'Software Engineer II', company:'Shopify', source:'LinkedIn', location:'Remote', salary:'$120k–$160k', skills:['Ruby','React','Rails'], posted:'5h ago', status:'seen', match:69 },
+  { id:8, title:'Infrastructure Engineer', company:'Fly.io', source:'AngelList', location:'Remote', salary:'$140k–$190k', skills:['Rust','Elixir','Linux'], posted:'6h ago', status:'seen', match:65 },
+  { id:9, title:'Senior React Developer', company:'Webflow', source:'Indeed', location:'Hybrid', salary:'$130k–$170k', skills:['React','TypeScript','Sass'], posted:'7h ago', status:'seen', match:82 },
+  { id:10, title:'Platform Engineer', company:'Supabase', source:'GitHub Jobs', location:'Remote', salary:null, skills:['Postgres','TypeScript','Docker'], posted:'8h ago', status:'seen', match:77 },
+  { id:11, title:'Engineering Manager', company:'Loom', source:'LinkedIn', location:'Onsite', salary:'$200k–$260k', skills:['React','Python','Leadership'], posted:'9h ago', status:'seen', match:55 },
+  { id:12, title:'Software Engineer', company:'Retool', source:'Greenhouse', location:'Hybrid', salary:'$140k–$185k', skills:['React','Python','SQL'], posted:'10h ago', status:'seen', match:80 },
+  { id:13, title:'TypeScript Engineer', company:'Effect', source:'AngelList', location:'Remote', salary:null, skills:['TypeScript','FP','Node.js'], posted:'11h ago', status:'seen', match:91 },
+  { id:14, title:'Frontend Platform Eng.', company:'Airbnb', source:'LinkedIn', location:'Hybrid', salary:'$175k–$230k', skills:['React','Webpack','GraphQL'], posted:'12h ago', status:'seen', match:74 },
+  { id:15, title:'Senior SWE, Web', company:'Anthropic', source:'Greenhouse', location:'Hybrid', salary:'$190k–$250k', skills:['React','Python','TypeScript'], posted:'13h ago', status:'seen', match:96 },
+  { id:16, title:'Software Engineer', company:'Rippling', source:'Lever', location:'Hybrid', salary:'$150k–$200k', skills:['React','Java','Kafka'], posted:'14h ago', status:'seen', match:67 },
+  { id:17, title:'Senior Backend Eng.', company:'Clerk', source:'AngelList', location:'Remote', salary:'$130k–$175k', skills:['Node.js','Postgres','Auth'], posted:'15h ago', status:'seen', match:83 },
+  { id:18, title:'React Native Engineer', company:'Mercury', source:'Lever', location:'Remote', salary:'$140k–$190k', skills:['React Native','TypeScript','Finance'], posted:'16h ago', status:'seen', match:59 },
+  { id:19, title:'Developer Experience Eng.', company:'Nx', source:'Indeed', location:'Remote', salary:'$110k–$150k', skills:['Node.js','TypeScript','CLI'], posted:'17h ago', status:'seen', match:76 },
+  { id:20, title:'Software Engineer', company:'Plaid', source:'LinkedIn', location:'Hybrid', salary:'$160k–$210k', skills:['Go','Node.js','React'], posted:'18h ago', status:'seen', match:71 },
+  { id:21, title:'Principal Engineer', company:'Segment', source:'Greenhouse', location:'Remote', salary:'$200k–$280k', skills:['TypeScript','Kafka','AWS'], posted:'20h ago', status:'seen', match:64 },
+  { id:22, title:'Fullstack Engineer', company:'PostHog', source:'AngelList', location:'Remote', salary:null, skills:['React','Python','Django'], posted:'21h ago', status:'seen', match:87 },
+  { id:23, title:'iOS/Web Engineer', company:'Pitch', source:'Lever', location:'Hybrid', salary:'$130k–$170k', skills:['Swift','React','TypeScript'], posted:'22h ago', status:'seen', match:61 },
+  { id:24, title:'Data Engineer', company:'dbt Labs', source:'LinkedIn', location:'Remote', salary:'$140k–$185k', skills:['Python','SQL','Spark'], posted:'23h ago', status:'seen', match:58 },
+];
+
+const SOURCES = [
+  { name:'LinkedIn', count:72 },
+  { name:'Greenhouse', count:61 },
+  { name:'AngelList', count:48 },
+  { name:'Lever', count:39 },
+  { name:'Indeed', count:18 },
+  { name:'GitHub Jobs', count:10 },
+];
+
+const LOG_ENTRIES = [
+  { dot:'dot-green', time:'10:24', msg:'<b>Run complete</b> — 11 new jobs found across 6 sources' },
+  { dot:'dot-cyan',  time:'10:24', msg:'Deduplication: <b>8 duplicates</b> filtered (hash + title similarity)' },
+  { dot:'dot-green', time:'10:23', msg:'Scraped <b>Greenhouse</b> — 6 new listings' },
+  { dot:'dot-green', time:'10:22', msg:'Scraped <b>Lever</b> — 2 new listings' },
+  { dot:'dot-yellow',time:'10:21', msg:'Rate limited on <b>LinkedIn</b> — backing off 45s' },
+  { dot:'dot-green', time:'10:20', msg:'Scraped <b>LinkedIn</b> — 14 listings (3 new)' },
+  { dot:'dot-green', time:'10:19', msg:'Scraped <b>AngelList</b> — 4 new listings' },
+  { dot:'dot-green', time:'10:18', msg:'Scraped <b>Indeed</b> — 1 new listing' },
+  { dot:'dot-dim',   time:'09:54', msg:'Scheduled run started — checking 6 sources' },
+  { dot:'dot-green', time:'09:53', msg:'Run complete — 8 new jobs found' },
+  { dot:'dot-red',   time:'09:20', msg:'<b>Error:</b> GitHub Jobs returned 503 — will retry next run' },
+  { dot:'dot-dim',   time:'09:20', msg:'Scheduled run started — checking 6 sources' },
+];
+
+/* ─── State ─── */
+let saved = new Set([3, 15]);
+let page = 1;
+const PER_PAGE = 10;
+let filtered = [...JOBS];
+
+/* ─── Render jobs ─── */
+function renderJobs() {
+  const tbody = document.getElementById('jobs-tbody');
+  const start = (page - 1) * PER_PAGE;
+  const slice = filtered.slice(start, start + PER_PAGE);
+
+  tbody.innerHTML = slice.map(j => `
+    <tr>
+      <td>
+        <div class="job-title">${j.title}
+          ${j.match >= 80 ? `<span class="tag tag-new" style="font-size:10px;padding:1px 6px;margin-left:6px;">${j.match}% match</span>` : ''}
+        </div>
+        <div class="job-company">${j.company} · <span class="job-source">${j.source}</span></div>
+      </td>
+      <td><span class="tag tag-${j.location.toLowerCase()}">${j.location}</span></td>
+      <td>
+        <div class="skill-tags">
+          ${j.skills.slice(0,3).map(s => `<span class="skill-tag">${s}</span>`).join('')}
+        </div>
+      </td>
+      <td>
+        ${j.salary ? `<span class="salary">${j.salary}</span>` : '<span class="salary-null">Not listed</span>'}
+      </td>
+      <td><span class="time-ago">${j.posted}</span></td>
+      <td>
+        <div class="row-actions">
+          <button class="icon-btn ${saved.has(j.id) ? 'saved' : ''}" title="Save" onclick="toggleSave(${j.id}, this)">
+            ${saved.has(j.id) ? '★' : '☆'}
+          </button>
+          <button class="icon-btn" title="Open posting" onclick="openJob(${j.id})">↗</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+
+  document.getElementById('job-count').textContent = `${filtered.length} results`;
+  document.getElementById('pg-info').textContent =
+    `Showing ${start+1}–${Math.min(start+PER_PAGE, filtered.length)} of ${filtered.length}`;
+  renderPagination();
+}
+
+function renderPagination() {
+  const totalPages = Math.ceil(filtered.length / PER_PAGE);
+  const btns = document.getElementById('pg-btns');
+  btns.innerHTML = '';
+  for (let i = 1; i <= totalPages; i++) {
+    const b = document.createElement('button');
+    b.className = 'pg-btn' + (i === page ? ' active' : '');
+    b.textContent = i;
+    b.onclick = () => { page = i; renderJobs(); };
+    btns.appendChild(b);
+  }
+}
+
+function filterJobs() {
+  const q = document.getElementById('search-input').value.toLowerCase();
+  const loc = document.getElementById('filter-location').value;
+  const src = document.getElementById('filter-source').value;
+  const sta = document.getElementById('filter-status').value;
+
+  filtered = JOBS.filter(j => {
+    const text = `${j.title} ${j.company} ${j.skills.join(' ')}`.toLowerCase();
+    if (q && !text.includes(q)) return false;
+    if (loc && j.location !== loc) return false;
+    if (src && j.source !== src) return false;
+    if (sta && j.status !== sta) return false;
+    return true;
+  });
+  page = 1;
+  renderJobs();
+}
+
+/* ─── Render sources ─── */
+function renderSources() {
+  const max = Math.max(...SOURCES.map(s => s.count));
+  document.getElementById('sources-list').innerHTML = SOURCES.map(s => `
+    <div class="source-row">
+      <span class="source-name">${s.name}</span>
+      <div class="source-bar-wrap">
+        <div class="source-bar" style="width:${(s.count/max*100).toFixed(0)}%"></div>
+      </div>
+      <span class="source-count">${s.count}</span>
+    </div>
+  `).join('');
+}
+
+/* ─── Render log ─── */
+function renderLog() {
+  document.getElementById('agent-log').innerHTML = LOG_ENTRIES.map(e => `
+    <div class="log-entry">
+      <div class="log-dot ${e.dot}"></div>
+      <span class="log-time">${e.time}</span>
+      <span class="log-msg">${e.msg}</span>
+    </div>
+  `).join('');
+}
+
+/* ─── Sparkline ─── */
+function renderSparkline() {
+  const data = [3,7,5,8,4,11,6,9,12,8,7,10,9,11,8,9,11,7,10,13,9,8,11,9];
+  const max = Math.max(...data);
+  document.getElementById('sparkline').innerHTML = data.map((v,i) => {
+    const h = Math.round((v/max)*28);
+    const isErr = v < 4;
+    return `<div class="run-bar${isErr?' error':''}" style="height:${h}px" title="${v} jobs"></div>`;
+  }).join('');
+}
+
+/* ─── Actions ─── */
+function toggleSave(id, btn) {
+  if (saved.has(id)) {
+    saved.delete(id);
+    btn.classList.remove('saved');
+    btn.textContent = '☆';
+  } else {
+    saved.add(id);
+    btn.classList.add('saved');
+    btn.textContent = '★';
+  }
+}
+
+function openJob(id) {
+  const j = JOBS.find(x => x.id === id);
+  alert(`Opening: ${j.title} at ${j.company}\n(Mock data — no real URL)`);
+}
+
+function triggerRun() {
+  const badge = document.querySelector('.status-badge');
+  badge.innerHTML = '<div class="spinner"></div> Running…';
+  badge.style.background = 'var(--accent-soft)';
+  badge.style.color = 'var(--accent)';
+  badge.style.borderColor = 'rgba(99,102,241,0.25)';
+
+  const newEntry = { dot:'dot-dim', time:'10:25', msg:'Manual run triggered by user' };
+  LOG_ENTRIES.unshift(newEntry);
+  renderLog();
+
+  setTimeout(() => {
+    badge.innerHTML = '<div class="spinner"></div> Scraping LinkedIn';
+    badge.style.background = 'var(--green-soft)';
+    badge.style.color = 'var(--green)';
+    badge.style.borderColor = 'rgba(34,197,94,0.25)';
+    const done = { dot:'dot-green', time:'10:25', msg:'<b>Run complete</b> — 4 new jobs found' };
+    LOG_ENTRIES.unshift(done);
+    renderLog();
+  }, 2200);
+}
+
+function setNav(el) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  el.classList.add('active');
+}
+
+/* ─── Init ─── */
+renderJobs();
+renderSources();
+renderLog();
+renderSparkline();
+</script>
+</body>
+</html>
